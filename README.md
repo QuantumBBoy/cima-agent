@@ -1,5 +1,8 @@
 # pharma-agent
 
+[![CI](https://github.com/QuantumBBoy/cima-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/QuantumBBoy/cima-agent/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 Agente [LangGraph](https://langchain-ai.github.io/langgraph/) que responde consultas sobre medicamentos **citando siempre la fuente oficial AEMPS/CIMA**. No reimplementa nada: es una **capa de consumo** sobre el servidor MCP [`mcp-aemps`](https://github.com/romanpert/mcp-aemps).
 
 Caso de uso, acotado y terminable: **"consulta de medicación con verificación de receta y suministro"**. El usuario pregunta en lenguaje natural; el agente responde con datos oficiales, alternativas si las hay, y el aviso legal por delante.
