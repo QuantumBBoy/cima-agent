@@ -82,6 +82,14 @@ class VerifiedClaim(BaseModel):
     )
 
 
+class MedicinePhoto(BaseModel):
+    """Foto de un medicamento obtenida de CIMA (envase o ficha)."""
+
+    tipo: int = Field(1, description="Tipo CIMA: 1=envase, 2=ficha")
+    url: str = Field(description="URL pública de la imagen en CIMA/AEMPS")
+    fecha: Optional[str] = None
+
+
 class PharmaAnswer(BaseModel):
     """Salida estructurada para que PharmaFast la consuma programáticamente."""
 
@@ -90,6 +98,7 @@ class PharmaAnswer(BaseModel):
     answer: str
     claims: list[VerifiedClaim] = Field(default_factory=list)
     sources: list[Source] = Field(default_factory=list)
+    photos: list[MedicinePhoto] = Field(default_factory=list)
 
 
 class GraphState(TypedDict, total=False):
@@ -106,6 +115,7 @@ class GraphState(TypedDict, total=False):
     medicine_found: bool
     answer: str
     sources: list[Source]
+    photos: list[MedicinePhoto]
     structured_answer: PharmaAnswer
 
 

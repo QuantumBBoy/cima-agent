@@ -10,7 +10,7 @@ from __future__ import annotations
 import json
 from typing import Any, Optional
 
-from ..state import GraphState, Source, ToolResult
+from ..state import GraphState, MedicinePhoto, Source, ToolResult
 
 
 def parse_content(result: ToolResult) -> Any:
@@ -112,6 +112,34 @@ def collect_sources(state: GraphState) -> list[Source]:
             src = Source(endpoint=f"mcp-aemps:{result.tool}", consulted_at=src.consulted_at)
         sources.append(src)
     return sources
+
+
+def extract_photos(state: GraphState) -> list[MedicinePhoto]:
+    """Extrae URLs de fotos de medicamento de los resultados de CIMA.
+
+    ``obtener_medicamento`` y ``buscar_medicamentos`` incluyen un campo ``fotos``
+    con URLs públicas de imágenes del envase (tipo 1) y la ficha (tipo 2).
+    """
+    seen_urls: set[str] = set()
+    photos: list[MedicinePhoto] = []
+    for tool_name in ("obtener_medicamento", "buscar_medicamentos"):
+        for result in results_for(state, tool_name):
+            payload = parse_content(result)
+            for record in _iter_records(payload):
+                for foto in record.get("fotos", []):
+                    if not isinstance(foto, dict):
+                        continue
+                    url = foto.get("url") or foto.get("urlImagen") or foto.get("imagen")
+                    if url and url not in seen_urls:
+                        seen_urls.add(url)
+                        photos.append(
+                            MedicinePhoto(
+                                tipo=foto.get("tipo", 1),
+                                url=url,
+                                fecha=foto.get("fecha"),
+                            )
+                        )
+    return photos
 
 
 def results_as_text(state: GraphState, max_chars: int = 6000) -> str:

@@ -5,9 +5,9 @@ No reimplementa nada del servidor: lo lanza por stdio y orquesta sus tools.
 """
 
 from .graph import build_graph
-from .state import GraphState, PharmaAnswer, initial_state
+from .state import GraphState, MedicinePhoto, PharmaAnswer, initial_state
 
-__all__ = ["build_graph", "GraphState", "PharmaAnswer", "initial_state", "run_query"]
+__all__ = ["build_graph", "GraphState", "MedicinePhoto", "PharmaAnswer", "initial_state", "run_query"]
 
 __version__ = "0.1.0"
 

@@ -28,9 +28,19 @@ dev = [
 ollama = [
     "langchain-openai>=0.2",
 ]
+# Arquitectura AGUI: servidor FastAPI con SSE (protocolo AG-UI).
+agui = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+]
+# Arquitectura ATUI: terminal enriquecido con Rich (live pipeline + fotos).
+atui = [
+    "rich>=13.0",
+]
 
 [project.scripts]
 pharma-agent = "pharma_agent.cli:main"
+pharma-agent-atui = "pharma_agent.atui:main"
 
 [build-system]
 requires = ["hatchling"]

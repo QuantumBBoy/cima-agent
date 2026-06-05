@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pharma Agent — AGUI</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, sans-serif;
+      background: #f4f6fb;
+      color: #1a1a2e;
+      min-height: 100vh;
+      padding: 2rem;
+    }
+    h1 { font-size: 1.6rem; margin-bottom: 0.25rem; }
+    p.subtitle { color: #666; font-size: 0.9rem; margin-bottom: 1.5rem; }
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 2px 12px rgba(0,0,0,.08);
+      padding: 1.5rem;
+      margin-bottom: 1.25rem;
+    }
+    .search-row { display: flex; gap: 0.75rem; }
+    #query {
+      flex: 1;
+      padding: 0.65rem 1rem;
+      border: 1.5px solid #d0d5e8;
+      border-radius: 8px;
+      font-size: 1rem;
+    }
+    #query:focus { outline: none; border-color: #4361ee; }
+    button {
+      padding: 0.65rem 1.4rem;
+      background: #4361ee;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 1rem;
+      font-weight: 600;
+      transition: background .2s;
+    }
+    button:hover { background: #3451d1; }
+    button:disabled { background: #a0aec0; cursor: default; }
+
+    #pipeline { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem; }
+    .step {
+      display: flex; align-items: center; gap: 0.4rem;
+      padding: 0.3rem 0.75rem;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      background: #e9ecf7;
+      color: #4361ee;
+      transition: background .3s;
+    }
+    .step.active { background: #4361ee; color: #fff; }
+    .step.done   { background: #d1fae5; color: #065f46; }
+    .step-icon { font-size: 1rem; }
+
+    #answer-box {
+      white-space: pre-wrap;
+      font-size: 0.95rem;
+      line-height: 1.6;
+      min-height: 3rem;
+      color: #1a1a2e;
+    }
+    .disclaimer {
+      background: #fff7ed;
+      border-left: 4px solid #f59e0b;
+      padding: 0.6rem 0.9rem;
+      font-size: 0.85rem;
+      border-radius: 4px;
+      margin-bottom: 0.75rem;
+      color: #92400e;
+    }
+
+    #photos-section { display: none; }
+    #photos-section h3 { margin-bottom: 0.75rem; font-size: 1rem; color: #4361ee; }
+    #photos-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    .photo-card {
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      padding: 0.75rem;
+      text-align: center;
+      max-width: 180px;
+    }
+    .photo-card img {
+      max-width: 140px;
+      max-height: 140px;
+      object-fit: contain;
+      border-radius: 6px;
+      border: 1px solid #e5e7eb;
+      background: #fff;
+    }
+    .photo-label {
+      margin-top: 0.4rem;
+      font-size: 0.75rem;
+      color: #6b7280;
+    }
+    .photo-card a {
+      display: block;
+      margin-top: 0.3rem;
+      font-size: 0.72rem;
+      color: #4361ee;
+      word-break: break-all;
+    }
+
+    #sources-section { display: none; }
+    #sources-section h3 { margin-bottom: 0.5rem; font-size: 0.95rem; color: #6b7280; }
+    #sources-list { font-size: 0.82rem; color: #4b5563; }
+    #sources-list li { margin-bottom: 0.2rem; list-style: disc; margin-left: 1.2rem; }
+
+    .status-dot {
+      display: inline-block;
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #a0aec0;
+      margin-right: 6px;
+    }
+    .status-dot.running { background: #4361ee; animation: pulse 1s infinite; }
+    .status-dot.done    { background: #10b981; }
+    .status-dot.error   { background: #ef4444; }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: .4; }
+    }
+  </style>
+</head>
+<body>
+  <h1>💊 Pharma Agent <span style="color:#4361ee">AGUI</span></h1>
+  <p class="subtitle">Consulta medicamentos con datos oficiales AEMPS/CIMA · Arquitectura AG-UI</p>
+
+  <div class="card">
+    <div class="search-row">
+      <input id="query" type="text" placeholder="Ej: ¿necesito receta para el ibuprofeno 600mg?" />
+      <button id="btn" onclick="runQuery()">Consultar</button>
+    </div>
+    <div id="pipeline" style="margin-top:1rem;">
+      <div class="step" id="step-triage"><span class="step-icon">🔍</span> Triaje</div>
+      <div class="step" id="step-plan"><span class="step-icon">🗂️</span> Plan</div>
+      <div class="step" id="step-execute"><span class="step-icon">⚙️</span> Execute</div>
+      <div class="step" id="step-verify"><span class="step-icon">✅</span> Verify</div>
+      <div class="step" id="step-respond"><span class="step-icon">📝</span> Respond</div>
+    </div>
+  </div>
+
+  <div class="card" id="answer-card" style="display:none">
+    <div>
+      <span class="status-dot" id="status-dot"></span>
+      <strong id="status-label">Procesando…</strong>
+    </div>
+    <div class="disclaimer" id="disclaimer" style="display:none"></div>
+    <div id="answer-box"></div>
+  </div>
+
+  <div class="card" id="photos-section">
+    <h3>📸 Fotos del medicamento (CIMA)</h3>
+    <div id="photos-grid"></div>
+  </div>
+
+  <div class="card" id="sources-section">
+    <h3>Fuentes oficiales</h3>
+    <ul id="sources-list"></ul>
+  </div>
+
+  <script>
+    const TIPO_LABELS = { 1: "Envase", 2: "Ficha", 3: "Prospecto" };
+    const STEPS = ["triage", "plan", "execute", "verify", "respond"];
+
+    function reset() {
+      STEPS.forEach(s => {
+        const el = document.getElementById("step-" + s);
+        el.classList.remove("active", "done");
+      });
+      document.getElementById("answer-card").style.display = "none";
+      document.getElementById("photos-section").style.display = "none";
+      document.getElementById("sources-section").style.display = "none";
+      document.getElementById("answer-box").textContent = "";
+      document.getElementById("disclaimer").style.display = "none";
+      document.getElementById("disclaimer").textContent = "";
+      document.getElementById("photos-grid").innerHTML = "";
+      document.getElementById("sources-list").innerHTML = "";
+      document.getElementById("status-dot").className = "status-dot running";
+      document.getElementById("status-label").textContent = "Procesando…";
+    }
+
+    function markStep(name, done) {
+      const el = document.getElementById("step-" + name);
+      if (!el) return;
+      el.classList.toggle("active", !done);
+      el.classList.toggle("done", done);
+    }
+
+    function renderPhotos(photos) {
+      const grid = document.getElementById("photos-grid");
+      grid.innerHTML = "";
+      photos.forEach(p => {
+        const label = TIPO_LABELS[p.tipo] || ("Tipo " + p.tipo);
+        const card = document.createElement("div");
+        card.className = "photo-card";
+        card.innerHTML = `
+          <img src="${p.url}" alt="${label}" onerror="this.style.display='none'" />
+          <div class="photo-label">${label}${p.fecha ? " · " + p.fecha : ""}</div>
+          <a href="${p.url}" target="_blank" rel="noopener">Ver imagen ↗</a>
+        `;
+        grid.appendChild(card);
+      });
+      if (photos.length > 0) {
+        document.getElementById("photos-section").style.display = "block";
+      }
+    }
+
+    function renderSources(sources) {
+      const list = document.getElementById("sources-list");
+      list.innerHTML = "";
+      sources.forEach(s => {
+        const li = document.createElement("li");
+        li.textContent = (s.endpoint || "CIMA") + (s.consulted_at ? " — " + s.consulted_at : "");
+        list.appendChild(li);
+      });
+      if (sources.length > 0) {
+        document.getElementById("sources-section").style.display = "block";
+      }
+    }
+
+    async function runQuery() {
+      const query = document.getElementById("query").value.trim();
+      if (!query) return;
+
+      reset();
+      document.getElementById("btn").disabled = true;
+      document.getElementById("answer-card").style.display = "block";
+
+      const DISCLAIMER_PREFIX = "⚠️";
+      const answerBox = document.getElementById("answer-box");
+      const disclaimerEl = document.getElementById("disclaimer");
+      let buffer = "";
+      let disclaimerDone = false;
+
+      try {
+        const resp = await fetch("/runs", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ query }),
+        });
+
+        const reader = resp.body.getReader();
+        const decoder = new TextDecoder();
+        let partial = "";
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          partial += decoder.decode(value, { stream: true });
+          const lines = partial.split("\n\n");
+          partial = lines.pop();
+
+          for (const line of lines) {
+            if (!line.startsWith("data: ")) continue;
+            const ev = JSON.parse(line.slice(6));
+
+            if (ev.type === "TOOL_CALL_START") {
+              markStep(ev.toolCallName, false);
+            } else if (ev.type === "TOOL_CALL_END") {
+              const name = ev.toolCallId.split("-")[0];
+              markStep(name, true);
+            } else if (ev.type === "TEXT_MESSAGE_CONTENT") {
+              buffer += ev.delta;
+              // Separa el disclaimer de la respuesta principal.
+              if (!disclaimerDone && buffer.includes("\n\n")) {
+                const parts = buffer.split("\n\n");
+                disclaimerEl.textContent = parts[0];
+                disclaimerEl.style.display = "block";
+                answerBox.textContent = parts.slice(1).join("\n\n");
+                disclaimerDone = true;
+              } else if (!disclaimerDone) {
+                disclaimerEl.textContent = buffer;
+                disclaimerEl.style.display = "block";
+              } else {
+                answerBox.textContent = buffer.split("\n\n").slice(1).join("\n\n");
+              }
+            } else if (ev.type === "STATE_SNAPSHOT") {
+              const snap = ev.snapshot;
+              if (snap.photos && snap.photos.length) renderPhotos(snap.photos);
+              if (snap.sources && snap.sources.length) renderSources(snap.sources);
+            } else if (ev.type === "RUN_FINISHED") {
+              document.getElementById("status-dot").className = "status-dot done";
+              document.getElementById("status-label").textContent = "Completado";
+              STEPS.forEach(s => markStep(s, true));
+            } else if (ev.type === "RUN_ERROR") {
+              document.getElementById("status-dot").className = "status-dot error";
+              document.getElementById("status-label").textContent = "Error";
+              answerBox.textContent = "Error: " + ev.message;
+            }
+          }
+        }
+      } catch (e) {
+        document.getElementById("status-dot").className = "status-dot error";
+        document.getElementById("status-label").textContent = "Error de conexión";
+        answerBox.textContent = "No se pudo conectar al servidor. Asegúrate de que está en marcha:\n  uv run uvicorn pharma_agent.agui_server:app --reload";
+      }
+
+      document.getElementById("btn").disabled = false;
+    }
+
+    document.getElementById("query").addEventListener("keydown", e => {
+      if (e.key === "Enter") runQuery();
+    });
+  </script>
+</body>
+</html>

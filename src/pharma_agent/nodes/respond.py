@@ -13,7 +13,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 
 from ..prompts import DISCLAIMER, OUT_OF_SCOPE_MESSAGE, RESPOND_PROMPT
 from ..state import GraphState, PharmaAnswer
-from ._helpers import collect_sources
+from ._helpers import collect_sources, extract_photos
 
 
 def _render_claims(state: GraphState) -> str:
@@ -40,6 +40,7 @@ def make_respond_node(llm):
     async def respond_node(state: GraphState) -> GraphState:
         intent = state.get("intent")
         sources = collect_sources(state)
+        photos = extract_photos(state)
 
         # Fuera de alcance: mensaje fijo, sin LLM, sin fuentes.
         if intent == "desconocido":
@@ -47,7 +48,7 @@ def make_respond_node(llm):
             structured = PharmaAnswer(
                 disclaimer=DISCLAIMER, medicine_found=False, answer=OUT_OF_SCOPE_MESSAGE
             )
-            return {"answer": answer, "sources": [], "structured_answer": structured}
+            return {"answer": answer, "sources": [], "photos": [], "structured_answer": structured}
 
         context = (
             f"CONSULTA: {state['query']}\n"
@@ -71,7 +72,8 @@ def make_respond_node(llm):
             answer=prose,
             claims=state.get("verified_claims", []),
             sources=sources,
+            photos=photos,
         )
-        return {"answer": answer, "sources": sources, "structured_answer": structured}
+        return {"answer": answer, "sources": sources, "photos": photos, "structured_answer": structured}
 
     return respond_node
