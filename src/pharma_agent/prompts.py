@@ -56,6 +56,11 @@ Reglas estrictas:
 - Si no se resolvió ningún medicamento en CIMA, pon medicine_found=false.
 - Nunca completes huecos con conocimiento propio. Si la FT no incluye la sección
   pedida, eso es un claim no soportado, no una invención.
+- Evidencia por ausencia: si la consulta pregunta por un excipiente y el detalle
+  recuperado incluye la lista `excipientes` completa, la ausencia del excipiente
+  en esa lista SÍ es evidencia -> claim soportado con value "no contiene X según
+  la lista de excipientes de CIMA" y la lista como evidence. Lo mismo aplica a
+  cualquier lista cerrada recuperada (presentaciones, problemas de suministro).
 - Prefiere marcar como no soportado antes que arriesgar una alucinación."""
 
 RESPOND_PROMPT = """\

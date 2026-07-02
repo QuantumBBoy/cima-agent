@@ -42,14 +42,14 @@ Este agente es una capa de consumo sobre el servidor [`mcp-aemps`](https://githu
 
 De sus 21 tools, este caso de uso usa 6:
 
-| Tool | Para qué |
+| Tool | Para qué (args verificados en vivo) |
 |------|----------|
-| `buscar_medicamentos` | Resolver el fármaco por nombre |
-| `obtener_medicamento` | Leer el detalle, incl. el campo `receta` |
-| `doc_contenido` | Secciones de la FT (p. ej. §4.8 reacciones adversas) |
-| `buscar_en_ficha_tecnica` | Buscar términos/excipientes (p. ej. "lactosa") |
-| `problemas_suministro_dcpf` | Problemas de suministro |
-| `buscar_vmpp` | Equivalentes clínicos (mismo VMP) |
+| `buscar_medicamentos` | Resolver el fármaco por `nombre` |
+| `obtener_medicamento` | Detalle por `nregistro`/`cn`: campos `receta`, `excipientes`, `psum`, `vtm`/`pactivos` |
+| `doc_contenido` | Secciones de la FT (`tipo_doc=1`, `seccion="4.8"`, `nregistro`) |
+| `buscar_en_ficha_tecnica` | Reglas `{seccion, texto, contiene}` (p. ej. sin "lactosa" en §6.1) |
+| `problemas_suministro` | Problemas de suministro por `nregistro`/`cn` (listas) |
+| `buscar_vmpp` | Equivalentes clínicos (mismo VMP) por `practiv1` + `dosis` |
 
 ## Instalación
 
@@ -96,9 +96,9 @@ El modelo se elige con `PHARMA_AGENT_MODEL` (formato `provider:modelo`):
 - `ollama:gpt-oss:20b` — Ollama Cloud (endpoint OpenAI-compatible). Requiere
   `OLLAMA_API_KEY` y el extra `ollama` (`uv sync --extra ollama`).
 
-## Fricción real integrando (notas para el autor de `mcp-aemps`)
+## Fricción real integrando (notas de integración)
 
-Lo que costó integrar de verdad, documentado porque es justo lo que hace útil un email al autor:
+Lo que costó integrar de verdad — documentado para quien construya sobre `mcp-aemps` con LangChain:
 
 1. **El resultado de cada tool llega como bloques de contenido MCP.**
    `langchain-mcp-adapters` devuelve `[{"type":"text","text":"<JSON de CIMA>"}, …]`,
@@ -106,15 +106,29 @@ Lo que costó integrar de verdad, documentado porque es justo lo que hace útil 
    sin `text`. Hay que quedarse con el bloque de texto y parsear el JSON de CIMA
    que lleva dentro (ver [`_normalize_content`](src/pharma_agent/nodes/execute.py)).
    Si no, el agente no encuentra `resultados` y entra en bucle reportando "no encontrado".
-2. **La provenance no viaja en el payload del tool.** El JSON de CIMA no trae el
-   endpoint ni la fecha; el agente etiqueta la fuente como `mcp-aemps:<tool>` +
-   timestamp de recuperación. Sería ideal que el bloque incluyera el endpoint REST.
+2. **La provenance viaja anidada en `metadata`, no en claves top-level.** Cada
+   respuesta incluye `{"metadata": {"fuente": "CIMA (AEMPS)", "fecha_consulta":
+   …, "version_api": "1.23"}}` — al principio la buscamos plana y la dimos por
+   ausente. De ahí salen las fuentes citadas (ver
+   [`extract_source`](src/pharma_agent/nodes/_helpers.py)).
 3. **Structured output con modelos open (Ollama Cloud).** Esos modelos **no**
    respetan el structured output constrained (ni `format` json-schema, ni
    `response_format`, ni tool-calling de forma fiable). El agente lo resuelve con
    una envoltura que fuerza JSON por prompt + parseo tolerante + reintento de
    validación (ver [`JSONCoercedChat`](src/pharma_agent/llm.py)). Con un modelo
    con structured output nativo (p. ej. Claude) este paso sobra.
+4. **Los schemas reales difieren del README del servidor** — verifícalos por
+   introspección (`tool.args`) antes de planificar llamadas:
+   `problemas_suministro_dcpf` exige un código clínico `cod_dcpf` (usamos
+   `problemas_suministro`, que acepta `nregistro`/`cn` como listas);
+   `buscar_vmpp` filtra por `practiv1` (con `nombre` comercial devuelve 0);
+   `buscar_en_ficha_tecnica` exige reglas `{seccion, texto, contiene}` con
+   sección obligatoria; `doc_contenido` usa `tipo_doc`, no `tipo`.
+5. **CIMA ordena por similitud, no por relevancia clínica.** "omeprazol"
+   devuelve ESOMEPRAZOL primero, e "ibuprofeno cinfa" la suspensión 20 mg/ml
+   antes que los comprimidos de 600 mg. El agente re-ordena prefiriendo el
+   prefijo del nombre buscado + la dosis pedida (ver
+   [`resolve_medicine`](src/pharma_agent/nodes/_helpers.py)).
 
 ## Manejo de errores
 

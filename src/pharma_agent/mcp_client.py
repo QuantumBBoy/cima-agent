@@ -18,12 +18,15 @@ DEFAULT_ARGS = ["mcp-aemps@latest", "stdio"]
 
 # Tools de mcp-aemps relevantes para el caso de uso "consulta de medicación con
 # verificación de receta y suministro". No necesitamos las 21.
+# Nota verificada en vivo: usamos `problemas_suministro` (acepta nregistro/cn
+# como listas) y no `problemas_suministro_dcpf`, que exige un código clínico
+# DCPF que nuestro flujo de resolución por nombre no produce.
 RELEVANT_TOOLS = {
     "obtener_medicamento",
     "buscar_medicamentos",
     "doc_contenido",
     "doc_secciones",
-    "problemas_suministro_dcpf",
+    "problemas_suministro",
     "buscar_vmpp",
     "buscar_en_ficha_tecnica",
 }
