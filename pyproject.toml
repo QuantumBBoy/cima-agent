@@ -22,6 +22,12 @@ dependencies = [
 dev = [
     "pytest>=8.0",
     "pytest-asyncio>=0.23",
+    "httpx>=0.27",  # TestClient de FastAPI
+]
+# API HTTP (POST /consulta) para consumo programático (PharmaFast).
+api = [
+    "fastapi>=0.110",
+    "uvicorn>=0.30",
 ]
 # Backend Ollama Cloud (endpoint OpenAI-compatible). Solo si usas un modelo
 # "ollama:<modelo>" en PHARMA_AGENT_MODEL.
@@ -31,6 +37,7 @@ ollama = [
 
 [project.scripts]
 pharma-agent = "pharma_agent.cli:main"
+pharma-agent-api = "pharma_agent.api:main"
 
 [build-system]
 requires = ["hatchling"]

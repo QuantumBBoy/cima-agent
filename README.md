@@ -88,6 +88,23 @@ print(final["answer"])              # texto con disclaimer + fuentes
 print(final["structured_answer"])   # PharmaAnswer para consumo programático
 ```
 
+## API HTTP
+
+Para consumo desde otros servicios (p. ej. PharmaFast), el agente se expone como API FastAPI:
+
+```bash
+uv sync --extra api --extra ollama   # extras: api (+ el del proveedor LLM)
+pharma-agent-api                     # sirve en http://127.0.0.1:8000
+```
+
+```bash
+curl -X POST http://127.0.0.1:8000/consulta \
+  -H "Content-Type: application/json" \
+  -d '{"query": "¿necesita receta el paracetamol 1 g?"}'
+```
+
+Devuelve el `PharmaAnswer` estructurado (disclaimer, `medicine_found`, `claims` verificados con evidencia, `sources` con endpoint y fecha). `GET /health` para liveness, docs interactivas en `/docs`. El grafo y la conexión a `mcp-aemps` se inicializan una sola vez en el arranque; si `mcp-aemps` no está disponible el servidor falla al arrancar con un mensaje de setup claro, y los errores en runtime devuelven `502`/`503` con detalle.
+
 ## Modelo LLM (Anthropic u Ollama Cloud)
 
 El modelo se elige con `PHARMA_AGENT_MODEL` (formato `provider:modelo`):

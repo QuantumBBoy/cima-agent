@@ -30,7 +30,7 @@ jobs:
           cache-dependency-glob: "pyproject.toml"
 
       - name: Install dependencies
-        run: uv sync --extra dev
+        run: uv sync --extra dev --extra api
 
       # No necesita claves ni red: el smoke en vivo (-m live) está excluido por
       # addopts en pyproject.toml, así que aquí solo corre unit + integración mockeada.
