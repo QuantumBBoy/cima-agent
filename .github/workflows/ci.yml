@@ -26,6 +26,8 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           enable-cache: true
+          # uv.lock está gitignorado: clavamos la caché al pyproject.
+          cache-dependency-glob: "pyproject.toml"
 
       - name: Install dependencies
         run: uv sync --extra dev

@@ -30,6 +30,7 @@ Type "python examples/live_demo.py 2>/dev/null"
 Sleep 500ms
 Enter
 
-# Deja correr el flujo real: triage -> CIMA -> verify -> respond (latencia real).
-Sleep 24s
+# Deja correr el flujo real: triage -> CIMA -> verify -> respond (latencia real,
+# con margen para variación del LLM).
+Sleep 45s
 Sleep 1500ms
